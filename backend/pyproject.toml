@@ -1,0 +1,13 @@
+[project]
+name = "karya"
+version = "0.1.0"
+description = "Karya - describe the outcome, a team of AI workers does the job, cheaply, with proof."
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["karya*"]

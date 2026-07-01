@@ -1,0 +1,20 @@
+# Render blueprint for the Karya FastAPI backend.
+# Connect this repo at https://dashboard.render.com/blueprints and Render reads this file.
+services:
+  - type: web
+    name: karya-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn karya.planes.interface.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # Runs the deterministic mock engine by default (no API key needed).
+      # Set OPENAI_API_KEY in the Render dashboard and flip this to false for the real engine.
+      - key: KARYA_FORCE_MOCK
+        value: "true"
+      # - key: OPENAI_API_KEY
+      #   sync: false
