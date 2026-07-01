@@ -1,15 +1,16 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Jost, Cormorant_Garamond } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 import Chrome from "../components/Chrome";
 import { AuthProvider } from "../lib/auth";
 
-// Jost — a refined geometric sans for body; Cormorant Garamond — a high-contrast
-// couture serif for display. The "Noir & Gold" pairing.
-const sans = Jost({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const serif = Cormorant_Garamond({
+// Inter — a crisp, neutral sans for body; Fraunces — a premium high-contrast
+// serif (with italics) for display headings. Clean, editorial, legible.
+const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const serif = Fraunces({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
   variable: "--font-serif",
   display: "swap",
 });
