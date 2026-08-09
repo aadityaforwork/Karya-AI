@@ -94,7 +94,7 @@ export function derive(events: KaryaEvent[]): Derived {
   if (approvalReq && !approvalResolved) status = "awaiting_approval";
   const pendingApproval: PendingApproval | null =
     approvalReq && !approvalResolved
-      ? { approval_id: approvalReq.data.approval_id, summary: approvalReq.title, drafts: approvalReq.data.drafts || [] }
+      ? { approval_id: approvalReq.data.approval_id, summary: approvalReq.data.summary || approvalReq.title, drafts: approvalReq.data.drafts || [] }
       : null;
 
   const screened = Object.values(screenMap).sort((a, b) => b.fit - a.fit);

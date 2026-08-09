@@ -22,6 +22,7 @@ export default function RoleDetailPage() {
   const [selected, setSelected] = useState<PipelineCandidate | null>(null);
   const [approval, setApproval] = useState<ApprovalQueueItem | null>(null);
   const [running, setRunning] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   const refresh = useCallback(() => {
     api.rolePipeline(id).then((r) => setPipe(r.pipeline)).catch(() => {});
@@ -29,7 +30,7 @@ export default function RoleDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    api.role(id).then((r) => setRole(r.role)).catch(() => {});
+    api.role(id).then((r) => setRole(r.role)).catch(() => setNotFound(true));
     refresh();
     const t = setInterval(refresh, 2500);
     return () => clearInterval(t);
@@ -56,6 +57,16 @@ export default function RoleDetailPage() {
     return m;
   }, [pipe]);
 
+  if (notFound) {
+    return (
+      <div className="page">
+        <div className="empty">
+          Workspace not found. It may have been removed, or belongs to another account.{" "}
+          <a href="/roles" style={{ color: "var(--ink)", fontWeight: 600 }}>Back to workspaces →</a>
+        </div>
+      </div>
+    );
+  }
   if (!role) return <div className="page"><div className="empty">Loading…</div></div>;
   const skill = skills[role.skill];
   const accent = SKILL_ACCENT[skill?.accent] || "var(--ink)";

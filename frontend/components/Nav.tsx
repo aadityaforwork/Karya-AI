@@ -8,8 +8,10 @@ import { useAuth } from "../lib/auth";
 const LINKS = [
   { href: "/app", label: "Home" },
   { href: "/roles", label: "Workspaces" },
+  { href: "/talent", label: "Talent" },
   { href: "/approvals", label: "Approvals", badge: true },
   { href: "/playground", label: "Playground" },
+  { href: "/how-it-works", label: "How it works" },
   { href: "/settings", label: "Settings" },
 ];
 

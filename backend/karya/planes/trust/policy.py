@@ -28,7 +28,7 @@ class PolicyEngine:
             return PolicyDecision(
                 risk_tier=2,
                 requires_approval=True,
-                summary=f"External send to {n} candidate(s) needs your approval.",
+                summary=f"External send to {n} recipient(s) needs your approval.",
             )
         return PolicyDecision(
             risk_tier=0,

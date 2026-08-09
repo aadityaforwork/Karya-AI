@@ -375,7 +375,7 @@ class KaryaEngine:
         self.state.emit(
             ctx.goal.id, EventType.APPROVAL_REQUESTED,
             f"approval needed: {summary}",
-            {"approval_id": approval.id, "drafts": approval.payload["drafts"]},
+            {"approval_id": approval.id, "summary": summary, "drafts": approval.payload["drafts"]},
         )
         await gate.wait()
         ctx.goal.status = GoalStatus.RUNNING
