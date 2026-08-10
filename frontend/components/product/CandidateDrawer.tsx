@@ -90,16 +90,16 @@ export default function CandidateDrawer({
       <div className="drawer-bg" onClick={onClose} />
       <div className="drawer">
         <div className="dh">
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <div className="k mono" style={{ fontSize: 11, color: "var(--muted)" }}>{pc.location} · {pc.language}</div>
-            <button className="btn ghost" style={{ padding: "4px 10px" }} onClick={onClose}>✕</button>
+          <div className="row-between">
+            <div className="k mono small">{pc.location} · {pc.language}</div>
+            <button className="btn ghost iconbtn" onClick={onClose}>✕</button>
           </div>
           <h2>{pc.name}</h2>
-          <div style={{ marginTop: 6 }}>
+          <div className="badgerow">
             <span className={`badge ${pc.verdict === "advance" ? "mint" : pc.verdict === "reject" ? "rose" : "amber"}`}>
               {Math.round(pc.fit * 100)}% fit · {pc.verdict}
             </span>
-            <span className="badge slate" style={{ marginLeft: 6 }}>{verified.length} proven claims</span>
+            <span className="badge slate tight">{verified.length} proven claims</span>
           </div>
         </div>
 
@@ -132,7 +132,7 @@ export default function CandidateDrawer({
         <div className="sec">
           <h4>Conversation</h4>
           {messages.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: "var(--faint)" }}>No messages yet. Outreach appears here once sent.</div>
+            <div className="emptynote">No messages yet. Outreach appears here once sent.</div>
           ) : (
             <div className="thread">
               {messages.map((m) => (
@@ -162,16 +162,16 @@ export default function CandidateDrawer({
               )}
               <div className="sfoot">
                 <span className="mono">tier {suggestion.tier} · {suggestion.requires_approval ? "needs your approval" : "auto"}</span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn ghost" style={{ padding: "8px 13px" }} disabled={busy} onClick={() => { setSuggestion(null); setDraft(""); }}>Discard</button>
-                  <button className="btn" style={{ padding: "8px 14px" }} disabled={busy || !draft.trim()} onClick={send}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Send size={13} /> Approve and send</span>
+                <div className="btnrow">
+                  <button className="btn ghost compact" disabled={busy} onClick={() => { setSuggestion(null); setDraft(""); }}>Discard</button>
+                  <button className="btn compact" disabled={busy || !draft.trim()} onClick={send}>
+                    <span className="inline-ic"><Send size={13} /> Approve and send</span>
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <button className="btn ghost" style={{ marginTop: 10, padding: "8px 14px" }} disabled={busy} onClick={inbound}>
+            <button className="btn ghost compact mt-sm" disabled={busy} onClick={inbound}>
               {busy ? "Reading the reply…" : "Simulate inbound reply"}
             </button>
           )}

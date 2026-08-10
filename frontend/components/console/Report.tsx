@@ -16,12 +16,12 @@ export default function Report({ report }: { report: Record<string, any> }) {
           <div className="kpi"><div className="v" style={{ color: "var(--rose)" }}>{claims.rejected ?? 0}</div><div className="l">claims rejected</div></div>
         </div>
 
-        <div style={{ marginTop: 16, fontWeight: 600 }}>Finalists</div>
+        <div className="finalists-label">Finalists</div>
         {(report.finalists || []).map((f: any) => (
-          <div className="cand" key={f.name} style={{ marginTop: 8 }}>
-            <div className="row" style={{ cursor: "default" }}>
+          <div className="cand stacked-sm" key={f.name}>
+            <div className="row static">
               <div>
-                <div className="nm">{f.name}<span className="badge slate mono" style={{ marginLeft: 6 }}>{f.language}</span></div>
+                <div className="nm">{f.name}<span className="badge slate mono tight">{f.language}</span></div>
                 <div className="meta">{(f.proven_facts || []).length} cited facts</div>
               </div>
               <span className="fit advance">{Math.round((f.fit || 0) * 100)}%</span>
@@ -37,9 +37,9 @@ export default function Report({ report }: { report: Record<string, any> }) {
         ))}
 
         {cmp.savings_x != null && (
-          <div className="compare" style={{ marginTop: 16 }}>
+          <div className="compare gap">
             <span className="x">≈{cmp.savings_x}× cheaper</span>
-            <span className="cost-sub" style={{ marginLeft: 10 }}>
+            <span className="cost-sub inline">
               ${cmp.karya_usd} on Karya vs ${cmp.frontier_only_usd} frontier-only
             </span>
           </div>

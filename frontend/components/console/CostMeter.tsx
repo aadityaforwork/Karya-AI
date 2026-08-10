@@ -33,7 +33,7 @@ export default function CostMeter({ cost, comparison }: { cost: CostSnapshot; co
         {comparison?.frontier_only_usd != null && (
           <div className="compare">
             <span className="x">≈{comparison.savings_x}× cheaper</span>
-            <div className="cost-sub" style={{ marginTop: 4 }}>
+            <div className="cost-sub mt-tight">
               vs ${comparison.frontier_only_usd} running the frontier model for everything
             </div>
           </div>

@@ -35,9 +35,9 @@ export default function TalentPage() {
       </div>
 
       {pools.length > 1 && (
-        <div className="chips" style={{ marginBottom: 16 }}>
+        <div className="chips filterrow">
           {pools.map((s) => (
-            <span key={s.id} className="chip" style={pool === s.pool ? { borderColor: "var(--ink)", color: "var(--ink)" } : {}} onClick={() => setPool(s.pool)}>{s.name}</span>
+            <span key={s.id} className={`chip${pool === s.pool ? " on" : ""}`} onClick={() => setPool(s.pool)}>{s.name}</span>
           ))}
         </div>
       )}
@@ -62,10 +62,10 @@ export default function TalentPage() {
             <div className="mh">
               <div className="k">{pool === "talent" ? "résumé" : "profile"} · line-level evidence</div>
               <h2>{selected.name} <span className="badge slate mono">{selected.language}</span></h2>
-              <div className="cost-sub" style={{ marginTop: 4 }}>{selected.headline} · {selected.location}{selected.years_experience > 0 ? ` · ${selected.years_experience} years` : ""}</div>
+              <div className="cost-sub modaltight">{selected.headline} · {selected.location}{selected.years_experience > 0 ? ` · ${selected.years_experience} years` : ""}</div>
             </div>
-            <div style={{ padding: "14px 19px" }}>
-              <div className="sk" style={{ marginBottom: 12 }}>
+            <div className="modalbody">
+              <div className="sk tagrow tight">
                 {selected.skills.map((s) => <span className="tag mono" key={s}>{s}</span>)}
               </div>
               <div className="resume">
@@ -77,7 +77,7 @@ export default function TalentPage() {
                 ))}
               </div>
             </div>
-            <div className="acts" style={{ padding: "8px 19px 19px" }}>
+            <div className="acts modalacts">
               <button className="btn ghost" onClick={() => setSelected(null)}>Close</button>
             </div>
           </div>

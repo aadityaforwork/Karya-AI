@@ -62,7 +62,7 @@ export default function RoleDetailPage() {
       <div className="page">
         <div className="empty">
           Workspace not found. It may have been removed, or belongs to another account.{" "}
-          <a href="/roles" style={{ color: "var(--ink)", fontWeight: 600 }}>Back to workspaces →</a>
+          <a href="/roles" className="strong-ink">Back to workspaces →</a>
         </div>
       </div>
     );
@@ -75,22 +75,22 @@ export default function RoleDetailPage() {
   return (
     <div className="page">
       <div className="toolbar">
-        <div className="lead" style={{ margin: 0 }}>
-          <h1 style={{ fontSize: 23 }}>
-            <span style={{ width: 11, height: 11, borderRadius: 3, background: accent, display: "inline-block", marginRight: 9 }} />
-            {role.title} <span style={{ color: "var(--faint)", fontWeight: 400, fontSize: 16 }}>· {role.location}</span>
+        <div className="lead compact">
+          <h1 className="roletitle">
+            <span className="dot lg" style={{ background: accent }} />
+            {role.title} <span className="roleloc">· {role.location}</span>
           </h1>
-          <p style={{ marginTop: 4 }}>
-            <span className="badge" style={{ background: "var(--panel-2)", color: "var(--muted)" }}>{skill?.name || role.skill}</span>
-            {" "}· {role.headcount} target · {role.must_have.join(", ")} · <a href="/roles" style={{ color: "var(--muted)" }}>all workspaces</a>
+          <p>
+            <span className="badge chipbg">{skill?.name || role.skill}</span>
+            {" "}· {role.headcount} target · {role.must_have.join(", ")} · <a href="/roles" className="muted">all workspaces</a>
           </p>
         </div>
-        <button className="btn" onClick={run} disabled={running}>{running ? "Working…" : `Run ${skill?.spec === "campaign" ? "sourcing" : "sourcing"}`}</button>
+        <button className="btn" onClick={run} disabled={running}>{running ? "Working…" : "Run sourcing"}</button>
       </div>
 
       {approval && (
-        <div className="card" style={{ marginBottom: 16, borderColor: "var(--amber)" }}>
-          <div className="bd" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="card approvalbanner">
+          <div className="bd row-mid">
             <span><b>Approval waiting</b> · {approval.summary}</span>
             <span className="badge amber">review below</span>
           </div>

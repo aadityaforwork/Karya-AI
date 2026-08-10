@@ -33,11 +33,11 @@ export default function ApprovalModal({
             {d.cited_facts.length > 0 && <div className="ct"><Check size={13} /> cites: {d.cited_facts.join(" · ")}</div>}
           </div>
         ))}
-        <div className="acts">
-          <button className="btn" style={{ flex: 1 }} disabled={busy} onClick={() => decide(true)}>
+        <div className="acts evenbtns">
+          <button className="btn" disabled={busy} onClick={() => decide(true)}>
             Approve &amp; send
           </button>
-          <button className="btn ghost" style={{ flex: 1 }} disabled={busy} onClick={() => decide(false)}>
+          <button className="btn ghost" disabled={busy} onClick={() => decide(false)}>
             Decline
           </button>
         </div>

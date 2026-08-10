@@ -27,21 +27,21 @@ export default function SettingsPage() {
         <p>How the workforce is configured. The engine, the cost ladder, the trust rules, and the skill catalogue.</p>
       </div>
 
-      <div className="split" style={{ marginTop: 0 }}>
+      <div className="split flush">
         <div className="card">
           <div className="hd"><h3>Engine &amp; model tiers</h3></div>
           <div className="bd">
             <div className="minirow"><span>Engine</span><span><span className={`badge ${health?.engine === "openai" ? "mint" : "slate"}`}>{health?.engine || "…"}</span></span></div>
             <div className="minirow"><span>Confidence gate (τ)</span><span className="mono">{health?.gate_tau ?? "…"}</span></div>
-            <div style={{ marginTop: 12 }}>
+            <div className="section-gap">
               {(health?.tiers || []).map((t) => (
-                <div className="barline" key={t.tier} style={{ justifyContent: "space-between" }}>
-                  <span><b>Tier {t.tier}</b> <span className="mono" style={{ color: "var(--muted)" }}>{t.model}</span></span>
-                  <span style={{ fontSize: 12, color: "var(--faint)" }}>{TIER_ROLE[t.tier]}</span>
+                <div className="barline row-mid" key={t.tier}>
+                  <span><b>Tier {t.tier}</b> <span className="mono muted">{t.model}</span></span>
+                  <span className="tierrole">{TIER_ROLE[t.tier]}</span>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 10, marginBottom: 0 }}>
+            <p className="note">
               Set <span className="mono">OPENAI_API_KEY</span> in the backend <span className="mono">.env</span> to switch from mock to live. Tiers run through LangChain.
             </p>
           </div>
@@ -54,14 +54,14 @@ export default function SettingsPage() {
             <div className="minirow"><span>Unproven claims</span><span className="badge rose">rejected</span></div>
             <div className="minirow"><span>External sends</span><span className="badge amber">human approval</span></div>
             <div className="minirow"><span>Duplicate sends</span><span className="badge slate">blocked (idempotent)</span></div>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 10, marginBottom: 0 }}>
+            <p className="note">
               Karya runs the boring 95% autonomously; anything with real, irreversible consequences waits in Approvals.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 18 }}>
+      <div className="card card-gap">
         <div className="hd"><h3>Language-aware routing</h3></div>
         <div className="bd">
           <table className="langtable">
@@ -75,16 +75,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 18 }}>
+      <div className="card card-gap">
         <div className="hd"><h3>Skill catalogue</h3></div>
         <div className="bd">
           {skills.map((s) => (
             <div className="minirow" key={s.id}>
-              <span><b>{s.name}</b> <span style={{ color: "var(--muted)" }}>· {s.tagline}</span></span>
+              <span><b>{s.name}</b> <span className="muted">· {s.tagline}</span></span>
               <span>{s.active ? <span className="badge mint">live</span> : <span className="badge slate">soon</span>}</span>
             </div>
           ))}
-          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 10, marginBottom: 0 }}>
+          <p className="note">
             Browse the underlying data pool on the <a href="/talent">Talent</a> page.
           </p>
         </div>

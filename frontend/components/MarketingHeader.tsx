@@ -2,6 +2,9 @@
 
 import { useAuth } from "../lib/auth";
 
+// N5 floating pill — detached from the viewport edge, blur backdrop over
+// the dark canvas. Deliberately a different register from the app's N3
+// side rail: this is the public front door, not the signed-in workbench.
 export default function MarketingHeader() {
   const { user, loading } = useAuth();
   return (
@@ -14,12 +17,12 @@ export default function MarketingHeader() {
       </div>
       <span className="spacer" />
       {!loading && (user ? (
-        <a className="btn" style={{ padding: "8px 16px" }} href="/app">Open app →</a>
+        <a className="btn" href="/app">Open app <span aria-hidden>→</span></a>
       ) : (
-        <span style={{ display: "flex", gap: 8 }}>
-          <a className="btn ghost" style={{ padding: "8px 16px" }} href="/login">Log in</a>
-          <a className="btn" style={{ padding: "8px 16px" }} href="/signup">Start free</a>
-        </span>
+        <div className="navcta">
+          <a className="btn ghost" href="/login">Log in</a>
+          <a className="btn" href="/signup">Start free</a>
+        </div>
       ))}
     </nav>
   );

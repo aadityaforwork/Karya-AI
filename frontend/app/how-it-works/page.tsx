@@ -38,23 +38,19 @@ export default function HowItWorksPage() {
         ))}
       </div>
 
-      <h3 style={{ margin: "30px 0 4px", fontSize: 13, letterSpacing: 1, textTransform: "uppercase", color: "var(--muted)" }}>
-        Three rules make it work
-      </h3>
+      <h3 className="subhead">Three rules make it work</h3>
       <div className="rules">
         {RULES.map((r, i) => (
           <div className="card" key={i}>
             <div className="bd">
-              <div style={{ fontWeight: 650, marginBottom: 6 }}>{r.h}</div>
-              <div style={{ color: "var(--muted)", fontSize: 13 }}>{r.p}</div>
+              <div className="t">{r.h}</div>
+              <div className="d">{r.p}</div>
             </div>
           </div>
         ))}
       </div>
 
-      <h3 style={{ margin: "30px 0 8px", fontSize: 13, letterSpacing: 1, textTransform: "uppercase", color: "var(--muted)" }}>
-        We route by language, not just difficulty
-      </h3>
+      <h3 className="subhead spaced">We route by language, not just difficulty</h3>
       <div className="card">
         <div className="bd">
           <table className="langtable">
@@ -71,7 +67,7 @@ export default function HowItWorksPage() {
               ))}
             </tbody>
           </table>
-          <p style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 12, marginBottom: 0 }}>
+          <p className="note langnote">
             Cheap models are strong in English and weak in Indian languages, so Karya starts low-accuracy languages on a smarter tier instead of wasting a doomed cheap call. These scores are learned from the verifier’s own outcomes over time.
           </p>
         </div>

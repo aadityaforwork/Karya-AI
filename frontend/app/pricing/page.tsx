@@ -16,18 +16,18 @@ export default function PricingPage() {
 
   return (
     <div className="page">
-      <div className="lead" style={{ textAlign: "center" }}>
+      <div className="lead center">
         <h1>Pricing that scales with the work</h1>
-        <p style={{ margin: "6px auto 0" }}>Every plan runs on the same cost-aware engine. You only pay for the seats and skills you use.</p>
+        <p>Every plan runs on the same cost-aware engine. You only pay for the seats and skills you use.</p>
       </div>
 
       <div className="plans">
         {plans.map((p) => (
           <div className={`plancard ${p.id === "pro" ? "featured" : ""}`} key={p.id}>
-            <div className="pname">{p.name} {p.id === "pro" && <span className="badge mint" style={{ marginLeft: 6 }}>popular</span>}</div>
+            <div className="pname plancard-title">{p.name} {p.id === "pro" && <span className="badge mint tight">popular</span>}</div>
             <div className="pprice">${p.price_usd}<span>/mo</span></div>
             <div className="ptag">{p.tagline}</div>
-            <div style={{ margin: "14px 0" }}>
+            <div className="featlist">
               {p.features.map((f) => <div className="feat" key={f}><span className="ic"><Check size={13} /></span>{f}</div>)}
             </div>
             <a className={`btn ${p.id === "free" ? "ghost" : ""}`} href={user ? "/billing" : "/signup"}>
@@ -37,7 +37,7 @@ export default function PricingPage() {
         ))}
       </div>
 
-      <p style={{ textAlign: "center", color: "var(--faint)", fontSize: 12.5, marginTop: 22 }}>
+      <p className="finemuted">
         Payments are mocked in this build. Choosing a plan switches you instantly so you can explore every tier.
       </p>
     </div>

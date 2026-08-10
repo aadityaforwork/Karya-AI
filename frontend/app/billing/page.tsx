@@ -10,10 +10,10 @@ function Usage({ label, used, limit }: { label: string; used: number; limit: num
   const unlimited = limit < 0;
   const pct = unlimited ? 8 : Math.min(100, (used / Math.max(1, limit)) * 100);
   return (
-    <div className="barline" style={{ alignItems: "center" }}>
-      <span className="lbl" style={{ width: 100 }}>{label}</span>
+    <div className="barline">
+      <span className="lbl wide">{label}</span>
       <div className="track"><div className="fill" style={{ width: `${pct}%`, background: pct > 85 && !unlimited ? "var(--rose)" : "var(--mint)" }} /></div>
-      <span className="mono" style={{ width: 72, textAlign: "right" }}>{used}{unlimited ? "" : ` / ${limit}`}</span>
+      <span className="mono usageval">{used}{unlimited ? "" : ` / ${limit}`}</span>
     </div>
   );
 }
@@ -40,10 +40,10 @@ export default function BillingPage() {
     <div className="page">
       <div className="lead">
         <h1>Billing &amp; plan</h1>
-        <p>You're on the <b style={{ color: "var(--ink)" }}>{b.plan}</b> plan. Switch any time. It takes effect instantly.</p>
+        <p>You're on the <b className="strong-ink">{b.plan}</b> plan. Switch any time. It takes effect instantly.</p>
       </div>
 
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card createcard">
         <div className="hd"><h3>This cycle's usage</h3></div>
         <div className="bd">
           <Usage label="Workspaces" used={b.usage.workspaces} limit={b.usage.workspace_limit} />
@@ -56,10 +56,10 @@ export default function BillingPage() {
           const current = p.id === b.plan;
           return (
             <div className={`plancard ${current ? "current" : p.id === "pro" ? "featured" : ""}`} key={p.id}>
-              <div className="pname">{p.name}{current && <span className="badge mint" style={{ marginLeft: 6 }}>current</span>}</div>
+              <div className="pname plancard-title">{p.name}{current && <span className="badge mint tight">current</span>}</div>
               <div className="pprice">${p.price_usd}<span>/mo</span></div>
               <div className="ptag">{p.tagline}</div>
-              <div style={{ margin: "14px 0" }}>
+              <div className="featlist">
                 {p.features.map((f) => <div className="feat" key={f}><span className="ic"><Check size={13} /></span>{f}</div>)}
               </div>
               <button className={`btn ${current ? "ghost" : ""}`} disabled={current || busy === p.id} onClick={() => choose(p.id)}>
@@ -70,7 +70,7 @@ export default function BillingPage() {
         })}
       </div>
 
-      <p style={{ textAlign: "center", color: "var(--faint)", fontSize: 12.5, marginTop: 20 }}>
+      <p className="finemuted">
         Checkout is mocked in this build. A real processor (Stripe) slots in behind the subscribe action.
       </p>
     </div>

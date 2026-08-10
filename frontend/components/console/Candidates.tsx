@@ -6,7 +6,7 @@ import type { ScreenedView } from "../../lib/useKarya";
 import { Check, Cross } from "../icons";
 
 function langBadge(lang: string) {
-  return lang ? <span className="badge slate mono" style={{ marginLeft: 6 }}>{lang}</span> : null;
+  return lang ? <span className="badge slate mono tight">{lang}</span> : null;
 }
 
 function RichCard({ c }: { c: RunCandidate }) {
@@ -19,7 +19,7 @@ function RichCard({ c }: { c: RunCandidate }) {
           <div className="nm">
             {c.name}
             {langBadge(c.language)}
-            {c.is_finalist && <span className="badge mint" style={{ marginLeft: 6 }}>finalist</span>}
+            {c.is_finalist && <span className="badge mint tight">finalist</span>}
           </div>
           <div className="meta">{c.location} · {verified.length} proven claims · {open ? "hide" : "show"} evidence</div>
         </div>
@@ -53,7 +53,7 @@ function RichCard({ c }: { c: RunCandidate }) {
 function LiteCard({ c }: { c: ScreenedView }) {
   return (
     <div className="cand">
-      <div className="row" style={{ cursor: "default" }}>
+      <div className="row static">
         <div>
           <div className="nm">{c.name}{langBadge(c.language)}</div>
           <div className="meta">{c.verified.length} proven · {c.rejected.length} rejected</div>

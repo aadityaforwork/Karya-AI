@@ -65,26 +65,26 @@ export default function WorkspacesPage() {
   return (
     <div className="page">
       <div className="toolbar">
-        <div className="lead" style={{ margin: 0 }}>
+        <div className="lead compact">
           <h1>Workspaces</h1>
-          <p style={{ marginTop: 4 }}>Each workspace is one skill working one goal, with its own pipeline.</p>
+          <p>Each workspace is one skill working one goal, with its own pipeline.</p>
         </div>
         <button className="btn" onClick={() => setOpen((o) => !o)}>{open ? "Cancel" : "+ New workspace"}</button>
       </div>
 
-      <div className="chips" style={{ marginBottom: 16 }}>
-        <span className={`chip ${filter === "all" ? "" : ""}`} style={filter === "all" ? { borderColor: "var(--ink)", color: "var(--ink)" } : {}} onClick={() => setFilter("all")}>All</span>
+      <div className="chips filterrow">
+        <span className={`chip${filter === "all" ? " on" : ""}`} onClick={() => setFilter("all")}>All</span>
         {skillList.map((s) => (
-          <span key={s.id} className="chip" style={filter === s.id ? { borderColor: "var(--ink)", color: "var(--ink)" } : {}} onClick={() => setFilter(s.id)}>{s.name}</span>
+          <span key={s.id} className={`chip${filter === s.id ? " on" : ""}`} onClick={() => setFilter(s.id)}>{s.name}</span>
         ))}
       </div>
 
       {open && (
-        <div className="card" style={{ marginBottom: 18 }}>
+        <div className="card createcard">
           <div className="bd">
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>Skill</label>
-              <div className="stagepick" style={{ marginTop: 6 }}>
+            <div className="skillfield">
+              <label className="fieldlabel">Skill</label>
+              <div className="stagepick skillpick">
                 {skillList.map((s) => (
                   <button key={s.id} className={skillId === s.id ? "on" : ""} onClick={() => setSkillId(s.id)}>{s.name}</button>
                 ))}
@@ -98,7 +98,7 @@ export default function WorkspacesPage() {
               <div><label>{isSales ? "Region" : "Location"}</label><input value={form.location} onChange={(e) => set("location", e.target.value)} /></div>
               <div><label>{isSales ? "Required signals" : "Must-have skills"} (comma-separated)</label><input value={form.must_have} onChange={(e) => set("must_have", e.target.value)} /></div>
               <div><label>{isSales ? "Nice-to-have signals" : "Nice-to-have skills"}</label><input value={form.nice_to_have} onChange={(e) => set("nice_to_have", e.target.value)} /></div>
-              {err && <div className="autherr">{err} <a href="/billing" style={{ color: "var(--ink)", fontWeight: 600 }}>Upgrade →</a></div>}
+              {err && <div className="autherr">{err} <a href="/billing" className="strong-ink">Upgrade →</a></div>}
               <div><button className="btn" disabled={busy || !form.title.trim()} onClick={create}>{busy ? "Creating…" : `Create ${cur?.spec || "workspace"}`}</button></div>
             </div>
           </div>
@@ -112,14 +112,14 @@ export default function WorkspacesPage() {
           const accent = SKILL_ACCENT[skills[r.skill]?.accent] || "var(--ink)";
           return (
             <a className="rolecard" href={`/roles/${r.id}`} key={r.id} style={{ borderLeft: `4px solid ${accent}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div className="rh">
                 <div>
                   <div className="rt">{r.title}</div>
                   <div className="rm">{skills[r.skill]?.name || r.skill} · {r.location} · {r.headcount} target</div>
                 </div>
                 <span className={`badge ${statusBadge(r.status)}`}>{r.status}</span>
               </div>
-              <div className="sk" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+              <div className="sk tagrow">
                 {r.must_have.map((s) => <span className="tag mono" key={s}>{s}</span>)}
               </div>
               <div className="rs">

@@ -42,13 +42,13 @@ export default function ApprovalsPage() {
             <span className="badge amber">risk tier {a.risk_tier}</span>
           </div>
           {a.payload.drafts.map((d) => (
-            <div className="draft" key={d.candidate_id} style={{ margin: "12px 0 0" }}>
+            <div className="draft stacked" key={d.candidate_id}>
               <div className="sj">{d.subject} <span className="badge slate mono">{d.language}</span></div>
               <div className="bd2">{d.body}</div>
               {d.cited_facts.length > 0 && <div className="ct"><Check size={13} /> cites: {d.cited_facts.join(" · ")}</div>}
             </div>
           ))}
-          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          <div className="acts aqacts">
             <button className="btn" disabled={busy === a.id} onClick={() => decide(a.id, true)}>Approve &amp; send</button>
             <button className="btn ghost" disabled={busy === a.id} onClick={() => decide(a.id, false)}>Decline</button>
           </div>

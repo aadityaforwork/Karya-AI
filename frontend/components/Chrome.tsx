@@ -29,5 +29,10 @@ export default function Chrome({ children }: { children: React.ReactNode }) {
   if (loading || !user) {
     return <div className="empty" style={{ paddingTop: 120 }}>Loading your workspace…</div>;
   }
-  return <><Nav />{children}</>;
+  return (
+    <div className="app-shell">
+      <Nav />
+      <div className="shell-body">{children}</div>
+    </div>
+  );
 }

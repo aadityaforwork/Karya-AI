@@ -59,7 +59,7 @@ export default function PlaygroundPage() {
         ))}
       </div>
 
-      {derived.nodes.length > 0 && <div style={{ marginTop: 18 }}><Pipeline nodes={derived.nodes} /></div>}
+      {derived.nodes.length > 0 && <div className="section-gap"><Pipeline nodes={derived.nodes} /></div>}
 
       <div className="cols">
         <ActivityFeed events={events} />
@@ -69,7 +69,7 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
-      {derived.report && <div style={{ marginTop: 18 }}><Report report={derived.report} /></div>}
+      {derived.report && <div className="section-gap"><Report report={derived.report} /></div>}
       {derived.pendingApproval && <ApprovalModal approval={derived.pendingApproval} onDecide={approve} />}
     </div>
   );
