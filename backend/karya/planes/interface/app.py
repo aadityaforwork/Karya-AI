@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from ...config import DATA_DIR, settings
-from ...core.events import EventType
-from ...core.models import Job
+from ...core.events import EventType, Level
+from ...core.models import ApprovalStatus, Job
 from ...engine import KaryaEngine
 from ...product import plans
 from ...product.auth import hash_password, make_token, verify_password, verify_token
@@ -32,6 +32,11 @@ store = ProductStore(DATA_DIR / "karya.db")
 # run_id -> role_id / user_id, so a pending approval carries its context
 _run_role: dict[str, str] = {}
 _run_user: dict[str, str] = {}
+# role_id -> the run currently in flight for it, so one workspace never has two
+_role_active_run: dict[str, str] = {}
+# Strong refs to the ingest tasks: asyncio only holds weak ones, so without this
+# a run's results could be garbage-collected before they reach the pipeline.
+_ingest_tasks: set[asyncio.Task] = set()
 
 TERMINAL = {EventType.RUN_COMPLETED, EventType.RUN_FAILED}
 
@@ -212,7 +217,7 @@ def get_run(run_id: str) -> dict:
         "job": ctx.job.model_dump() if ctx.job else None,
         "finalists": [c.name for c in ctx.finalists],
         "report": ctx.report or None,
-        "cost": engine.state.ledger.snapshot(),
+        "cost": engine.state.ledger.snapshot(run_id),
         "pending_approvals": [
             a.model_dump() for a in engine.state.entities.pending_approvals(run_id)
         ],
@@ -242,6 +247,11 @@ def talent(pool: str = "talent", user: User = Depends(current_user)) -> dict:
     return {"talent": engine.talent(pool)}
 
 
+@app.get("/api/pools/{pool}/facets")
+def pool_facets(pool: str, user: User = Depends(current_user)) -> dict:
+    return engine.pool_facets(pool)
+
+
 @app.get("/api/talent/{candidate_id}")
 def talent_detail(candidate_id: str, user: User = Depends(current_user)) -> dict:
     data = engine.candidate(candidate_id)
@@ -255,6 +265,10 @@ async def decide_approval(approval_id: str, body: ApprovalIn, user: User = Depen
     existing = engine.state.entities.approval(approval_id)
     if existing and _run_user.get(existing.run_id) not in (None, user.id):
         raise HTTPException(403, "not your approval")
+    if existing and existing.status == ApprovalStatus.PENDING and not engine.approval_is_live(approval_id):
+        # The run that opened this gate is gone (server restarted). Stamping it
+        # approved would look like it worked while nothing sent.
+        raise HTTPException(409, "that run is no longer active - start a new run to send this outreach")
     approval = engine.approve(approval_id, body.decision)
     if approval is None:
         raise HTTPException(404, "approval not found")
@@ -316,7 +330,12 @@ def create_role(body: RoleIn, user: User = Depends(current_user)) -> dict:
 @app.get("/api/roles/{role_id}")
 def get_role(role_id: str, user: User = Depends(current_user)) -> dict:
     role = _require_role(role_id, user)
-    return {"role": role.model_dump(), "runs": store.runs(role_id)}
+    # Hand back any run still in flight so a reload can rejoin its live feed
+    # instead of dropping the user on a board that looks idle.
+    active = _role_active_run.get(role_id)
+    if active and not engine.is_run_active(active):
+        active = None
+    return {"role": role.model_dump(), "runs": store.runs(role_id), "active_run": active}
 
 
 @app.post("/api/roles/{role_id}/close")
@@ -335,6 +354,17 @@ def role_pipeline(role_id: str, user: User = Depends(current_user)) -> dict:
 @app.post("/api/roles/{role_id}/run")
 async def run_role(role_id: str, user: User = Depends(current_user)) -> dict:
     role = _require_role(role_id, user)
+
+    # Re-running a workspace that is already working returns the run in flight
+    # rather than starting a second one. The old behaviour let an impatient
+    # second click double every candidate in the pipeline and open two approvals.
+    active = _role_active_run.get(role_id)
+    if active and engine.is_run_active(active):
+        return {"run_id": active, "already_running": True}
+
+    if not plans.can_run(user.plan, store.count_runs(user.id)):
+        raise HTTPException(402, "monthly run limit reached on your plan")
+
     meta = skill_meta(role.skill)
     job = Job(
         id=role.id, title=role.title, location=role.location, headcount=role.headcount,
@@ -345,25 +375,44 @@ async def run_role(role_id: str, user: User = Depends(current_user)) -> dict:
     goal = engine.start_goal_for_job(text, job)
     _run_role[goal.id] = role_id
     _run_user[goal.id] = user.id
-    asyncio.create_task(_ingest_after(role_id, goal.id, user.id))
-    return {"run_id": goal.id}
+    _role_active_run[role_id] = goal.id
+    task = asyncio.create_task(_ingest_after(role_id, goal.id, user.id))
+    _ingest_tasks.add(task)
+    task.add_done_callback(_ingest_tasks.discard)
+    return {"run_id": goal.id, "already_running": False}
 
 
 async def _ingest_after(role_id: str, run_id: str, user_id: str) -> None:
-    task = engine.task(run_id)
-    if task:
-        await task
-    ctx = engine.run_context(run_id)
-    if ctx is None or not ctx.report:
-        return
-    candidates = engine.run_candidates(run_id) or []
-    drafts = [
-        {"candidate_id": d.candidate_id, "subject": d.subject, "body": d.body,
-         "language": d.language.value, "sent": d.sent}
-        for d in ctx.drafts
-    ]
-    store.ingest_run(role_id, run_id, user_id=user_id, goal=ctx.goal.text, report=ctx.report,
-                     candidates=candidates, drafts=drafts)
+    """Wait for the run, then land its results in the durable pipeline.
+
+    Everything here is best-effort but must never die silently: this is the only
+    path by which a run's candidates reach the workspace board.
+    """
+    try:
+        task = engine.task(run_id)
+        if task:
+            await task
+        ctx = engine.run_context(run_id)
+        if ctx is None or not ctx.report:
+            return
+        candidates = engine.run_candidates(run_id) or []
+        drafts = [
+            {"candidate_id": d.candidate_id, "subject": d.subject, "body": d.body,
+             "language": d.language.value, "sent": d.sent}
+            for d in ctx.drafts
+        ]
+        store.ingest_run(role_id, run_id, user_id=user_id, goal=ctx.goal.text, report=ctx.report,
+                         candidates=candidates, drafts=drafts)
+    except Exception as error:  # noqa: BLE001
+        # Surface it on the run's own feed so the failure is visible in the UI
+        # rather than vanishing into a discarded task.
+        engine.state.emit(
+            run_id, EventType.RUN_FAILED, f"could not save results to the workspace: {error}",
+            {"error": str(error)}, level=Level.ERROR,
+        )
+    finally:
+        if _role_active_run.get(role_id) == run_id:
+            _role_active_run.pop(role_id, None)
 
 
 @app.post("/api/candidates/{pc_id}/stage")

@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { ApiError, api } from "../../lib/api";
 import type { ApprovalQueueItem } from "../../lib/types";
 import { Check } from "../../components/icons";
 
 export default function ApprovalsPage() {
   const [items, setItems] = useState<ApprovalQueueItem[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => api.approvalsQueue().then((r) => setItems(r.approvals)).catch(() => {}), []);
   useEffect(() => {
@@ -18,9 +19,18 @@ export default function ApprovalsPage() {
 
   const decide = async (id: string, decision: boolean) => {
     setBusy(id);
-    await api.approve(id, decision);
-    setItems((xs) => xs.filter((x) => x.id !== id));
-    setBusy(null);
+    setError(null);
+    try {
+      await api.approve(id, decision);
+      setItems((xs) => xs.filter((x) => x.id !== id));
+    } catch (e) {
+      // Most often a run that is no longer active (409). Say so, and drop the
+      // dead card rather than leaving a button that can never succeed.
+      setError(e instanceof ApiError ? e.message : "Could not record that decision.");
+      if (e instanceof ApiError && e.status === 409) setItems((xs) => xs.filter((x) => x.id !== id));
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -29,6 +39,8 @@ export default function ApprovalsPage() {
         <h1>Approvals</h1>
         <p>Karya does the boring 95% on its own. Anything that leaves the system, an external send, waits here for your one-tap approval.</p>
       </div>
+
+      {error && <div className="card approvalbanner"><div className="bd">{error}</div></div>}
 
       {items.length === 0 && <div className="empty">Nothing waiting. When a run is ready to send outreach, it shows up here.</div>}
 

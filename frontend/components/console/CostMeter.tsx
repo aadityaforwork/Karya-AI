@@ -30,7 +30,7 @@ export default function CostMeter({ cost, comparison }: { cost: CostSnapshot; co
             <span className="mono">{c(r.i)} calls · ${t(r.i).toFixed(4)}</span>
           </div>
         ))}
-        {comparison?.frontier_only_usd != null && (
+        {comparison?.frontier_only_usd != null && comparison?.savings_x != null && (
           <div className="compare">
             <span className="x">≈{comparison.savings_x}× cheaper</span>
             <div className="cost-sub mt-tight">

@@ -14,6 +14,19 @@ MIN_PER_SCREENED = 12
 MIN_PER_OUTREACH = 8
 
 
+def _further_stage(current: Stage, incoming: Stage) -> Stage:
+    """The later of two stages along the funnel.
+
+    A human's manual progress outranks a re-run's fresh screening verdict, but a
+    fresh run may still reject someone, and may revive a previously rejected
+    candidate whose evidence now holds up.
+    """
+    if current == Stage.REJECTED or incoming == Stage.REJECTED:
+        return incoming
+    order = {s: i for i, s in enumerate(FUNNEL)}
+    return current if order.get(current, 0) >= order.get(incoming, 0) else incoming
+
+
 def _loads(v: str | None, default):
     if not v:
         return default
@@ -118,6 +131,35 @@ class ProductStore:
                 pc.run_id, pc.created_at, pc.updated_at,
             ),
         )
+
+    def _upsert_pc(self, pc: PipelineCandidate) -> str:
+        """Insert the candidate, or refresh the row that already tracks them.
+
+        A workspace can be run many times against the same pool, so the same
+        person is sourced again and again. Inserting blindly stacked duplicate
+        cards in every column. Re-running now refreshes the evidence and keeps
+        the human's own work: notes are preserved, and someone already moved to
+        Interview is never dragged back to Screened by a fresh run.
+        """
+        row = self.db.one(
+            "SELECT * FROM pipeline WHERE role_id=? AND candidate_id=?",
+            (pc.role_id, pc.candidate_id),
+        )
+        if row is None:
+            self._insert_pc(pc)
+            return pc.id
+
+        current = self._pc(row)
+        self.db.execute(
+            "UPDATE pipeline SET name=?, language=?, location=?, fit=?, verdict=?, stage=?, "
+            "claims=?, run_id=?, updated_at=? WHERE id=?",
+            (
+                pc.name, pc.language, pc.location, pc.fit, pc.verdict,
+                _further_stage(current.stage, pc.stage).value,
+                json.dumps(pc.claims), pc.run_id, pc.updated_at, current.id,
+            ),
+        )
+        return current.id
 
     def pipeline(self, role_id: str) -> list[PipelineCandidate]:
         rows = self.db.query("SELECT * FROM pipeline WHERE role_id=? ORDER BY fit DESC", (role_id,))
@@ -253,13 +295,16 @@ class ProductStore:
                 location=c.get("location", ""), fit=c["fit_score"], verdict=c["verdict"],
                 stage=stage, claims=c["claims"], run_id=run_id, created_at=now, updated_at=now,
             )
-            self._insert_pc(pc)
+            pc_id = self._upsert_pc(pc)
             if cid in sent_ids and cid in draft_by_id:
                 d = draft_by_id[cid]
-                self.add_message(Message(
-                    pipeline_id=pc.id, sender="karya", language=d.get("language", "en"),
-                    body=f"{d.get('subject','')}\n\n{d.get('body','')}".strip(), created_at=now,
-                ))
+                body = f"{d.get('subject','')}\n\n{d.get('body','')}".strip()
+                # Re-running must not repost outreach already in the thread.
+                if not any(m.sender == "karya" and m.body == body for m in self.messages(pc_id)):
+                    self.add_message(Message(
+                        pipeline_id=pc_id, sender="karya", language=d.get("language", "en"),
+                        body=body, created_at=now,
+                    ))
 
         cost = report.get("cost", {})
         cmp = report.get("cost_comparison", {})

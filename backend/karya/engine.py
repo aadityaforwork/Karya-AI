@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from dataclasses import dataclass, field
 
@@ -39,6 +40,8 @@ class RunContext:
     finalists: list[Candidate] = field(default_factory=list)
     drafts: list[OutreachDraft] = field(default_factory=list)
     report: dict = field(default_factory=dict)
+    # Set when sourcing matched nobody, so the report can say why.
+    no_match: dict | None = None
 
 
 class KaryaEngine:
@@ -55,6 +58,8 @@ class KaryaEngine:
         self._tasks: dict[str, asyncio.Task] = {}
         self._approval_gates: dict[str, asyncio.Event] = {}
         self._approval_decisions: dict[str, bool] = {}
+        # How long a blocked send waits for a human before giving up (see _await_approval).
+        self.approval_timeout_s = float(os.getenv("KARYA_APPROVAL_TIMEOUT_S", 30 * 60))
 
         self._load_seed()
 
@@ -93,8 +98,22 @@ class KaryaEngine:
             gate.set()
         return approval
 
+    def approval_is_live(self, approval_id: str) -> bool:
+        """True when a run in *this* process is still awaiting this approval.
+
+        A pending approval whose gate is gone (server restarted mid-run) can be
+        stamped approved, but no run will ever act on it. The interface plane
+        checks this so the user gets told, instead of tapping Approve and
+        watching nothing happen.
+        """
+        return approval_id in self._approval_gates
+
     def run_context(self, run_id: str) -> RunContext | None:
         return self._runs.get(run_id)
+
+    def is_run_active(self, run_id: str) -> bool:
+        task = self._tasks.get(run_id)
+        return task is not None and not task.done()
 
     def task(self, run_id: str) -> asyncio.Task | None:
         return self._tasks.get(run_id)
@@ -144,6 +163,26 @@ class KaryaEngine:
             for c in self.state.entities.all_candidates()
             if c.pool == pool
         ]
+
+    def pool_facets(self, pool: str = "talent") -> dict:
+        """What a pool can actually be asked for: its skills and its locations.
+
+        The workspace form used to take free-text skills with no hint of what
+        the pool held, so a plausible spec could quietly match nobody.
+        """
+        members = [c for c in self.state.entities.all_candidates() if c.pool == pool]
+        skills: dict[str, int] = {}
+        places: dict[str, int] = {}
+        for c in members:
+            for s in c.skills:
+                skills[s] = skills.get(s, 0) + 1
+            places[c.location] = places.get(c.location, 0) + 1
+        return {
+            "pool": pool,
+            "size": len(members),
+            "skills": [{"name": s, "count": n} for s, n in sorted(skills.items(), key=lambda kv: (-kv[1], kv[0]))],
+            "locations": [{"name": p, "count": n} for p, n in sorted(places.items(), key=lambda kv: (-kv[1], kv[0]))],
+        }
 
     def candidate(self, candidate_id: str) -> dict | None:
         c = self.state.entities.candidates.get(candidate_id)
@@ -234,14 +273,22 @@ class KaryaEngine:
             )
             if ok:
                 goal.status = GoalStatus.DONE
-                self.state.emit(
-                    goal.id, EventType.RUN_COMPLETED,
-                    f"done: {ctx.report.get('sent', 0)} sent, "
-                    f"{ctx.report.get('claims', {}).get('verified', 0)} proven / "
-                    f"{ctx.report.get('claims', {}).get('rejected', 0)} rejected claims, "
-                    f"${ctx.report.get('cost', {}).get('total_usd', 0)}",
-                    ctx.report, level=Level.SUCCESS,
-                )
+                if ctx.no_match:
+                    note = ctx.no_match
+                    title = (
+                        f"no match: nothing in the {note['pool']} pool "
+                        f"({note['pool_size']} profiles) has {', '.join(note['requested']) or 'this spec'}"
+                    )
+                    level = Level.WARN
+                else:
+                    title = (
+                        f"done: {ctx.report.get('sent', 0)} sent, "
+                        f"{ctx.report.get('claims', {}).get('verified', 0)} proven / "
+                        f"{ctx.report.get('claims', {}).get('rejected', 0)} rejected claims, "
+                        f"${ctx.report.get('cost', {}).get('total_usd', 0)}"
+                    )
+                    level = Level.SUCCESS
+                self.state.emit(goal.id, EventType.RUN_COMPLETED, title, ctx.report, level=level)
             else:
                 goal.status = GoalStatus.FAILED
                 self.state.emit(goal.id, EventType.RUN_FAILED, "run stopped before completion", {})
@@ -261,7 +308,30 @@ class KaryaEngine:
 
     async def _do_source(self, ctx: RunContext, node: PlanNode) -> None:
         ctx.sourced = self.execution.sourcing.source(ctx.goal.id, ctx.job, node.params.get("limit", 8))
+        if not ctx.sourced:
+            ctx.no_match = self._no_match_note(ctx.job)
         node.result = {"sourced": len(ctx.sourced)}
+
+    def _no_match_note(self, job: Job | None) -> dict:
+        """Why a spec found nobody, and what the pool could match instead.
+
+        A run that sources nothing is not a failure, but it is useless without
+        this: the user needs to know their spec, not the system, is the problem.
+        """
+        pool = job.pool if job else "talent"
+        members = [c for c in self.state.entities.all_candidates() if c.pool == pool]
+        counts: dict[str, int] = {}
+        for c in members:
+            for s in c.skills:
+                counts[s] = counts.get(s, 0) + 1
+        top = sorted(counts, key=lambda s: (-counts[s], s))[:12]
+        return {
+            "pool": pool,
+            "pool_size": len(members),
+            "requested": (job.must_have + job.nice_to_have) if job else [],
+            "location": job.location if job else "",
+            "available_skills": top,
+        }
 
     async def _do_screen(self, ctx: RunContext, node: PlanNode) -> None:
         for cand in ctx.sourced:
@@ -317,8 +387,11 @@ class KaryaEngine:
         rejected = sum(
             len([c for c in s.claims if c.status == ClaimStatus.REJECTED]) for s in ctx.screenings
         )
-        ledger = self.state.ledger.snapshot()
-        frontier_only = self._frontier_only_estimate(verified + rejected)
+        ledger = self.state.ledger.snapshot(ctx.goal.id)
+        calls = sum(ledger["calls_by_tier"].values())
+        # A run that made no model calls has no economics to report; quoting a
+        # multiple there produced nonsense like "0.2x cheaper" on a $0.00 run.
+        frontier_only = self._frontier_only_estimate(verified + rejected) if calls else 0.0
         ctx.report = {
             "goal": ctx.goal.text,
             "job": ctx.job.model_dump() if ctx.job else {},
@@ -340,11 +413,12 @@ class KaryaEngine:
                 for c in ctx.finalists
             ],
             "sent": sum(1 for d in ctx.drafts if d.sent),
+            "no_match": ctx.no_match,
             "claims": {"verified": verified, "rejected": rejected},
             "cost": ledger,
             "cost_comparison": {
                 "karya_usd": ledger["total_usd"],
-                "frontier_only_usd": frontier_only,
+                "frontier_only_usd": frontier_only if calls else None,
                 "savings_x": round(frontier_only / ledger["total_usd"], 1) if ledger["total_usd"] else None,
             },
         }
@@ -357,6 +431,13 @@ class KaryaEngine:
         return round(max(calls, 1) * per_call, 4)
 
     async def _await_approval(self, ctx: RunContext, node: PlanNode, summary: str) -> bool:
+        """Block the run until a human decides - but never forever.
+
+        An abandoned tab used to leave this task awaiting an Event that nothing
+        would ever set: the run hung, and the workspace that was waiting on its
+        results stayed empty with no explanation. Timing out turns that into an
+        ordinary declined send, so the run still finishes and reports.
+        """
         approval = Approval(
             run_id=ctx.goal.id, node_id=node.id, risk_tier=2, summary=summary,
             payload={
@@ -377,6 +458,17 @@ class KaryaEngine:
             f"approval needed: {summary}",
             {"approval_id": approval.id, "summary": summary, "drafts": approval.payload["drafts"]},
         )
-        await gate.wait()
-        ctx.goal.status = GoalStatus.RUNNING
+        try:
+            await asyncio.wait_for(gate.wait(), timeout=self.approval_timeout_s)
+        except asyncio.TimeoutError:
+            approval.status = ApprovalStatus.EXPIRED
+            self.state.emit(
+                ctx.goal.id, EventType.APPROVAL_DENIED,
+                f"approval expired after {int(self.approval_timeout_s / 60)} min without a decision",
+                {"approval_id": approval.id, "expired": True}, level=Level.WARN,
+            )
+            return False
+        finally:
+            self._approval_gates.pop(approval.id, None)
+            ctx.goal.status = GoalStatus.RUNNING
         return self._approval_decisions.get(approval.id, False)

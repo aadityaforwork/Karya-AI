@@ -52,3 +52,12 @@ def workspace_limit(plan_id: str) -> int:
 def can_add_workspace(plan_id: str, current_count: int) -> bool:
     limit = workspace_limit(plan_id)
     return limit < 0 or current_count < limit
+
+
+def run_limit(plan_id: str) -> int:
+    return plan(plan_id)["runs_per_month"]
+
+
+def can_run(plan_id: str, current_count: int) -> bool:
+    limit = run_limit(plan_id)
+    return limit < 0 or current_count < limit

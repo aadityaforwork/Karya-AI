@@ -9,8 +9,8 @@ from .event_log import EventLog
 from .evidence_store import EvidenceStore
 
 
-class CostLedger:
-    """Running tally of spend, broken down by tier, for the economics story."""
+class _Tally:
+    """Spend for one scope, broken down by tier."""
 
     def __init__(self) -> None:
         self.total_usd = 0.0
@@ -28,6 +28,30 @@ class CostLedger:
             "by_tier": {str(t): round(v, 4) for t, v in self.by_tier.items()},
             "calls_by_tier": dict(self.calls_by_tier),
         }
+
+
+class CostLedger:
+    """Spend per run, plus a lifetime total for the process.
+
+    Kept per run because every number the product quotes - what this goal cost,
+    how much cheaper than frontier-for-everything - is about a single run. A
+    single shared tally made each run report the sum of every run before it, so
+    the savings multiple drifted further from the truth with each goal.
+    """
+
+    def __init__(self) -> None:
+        self._runs: dict[str, _Tally] = defaultdict(_Tally)
+        self._all = _Tally()
+
+    def add(self, run_id: str, tier: int, usd: float) -> None:
+        self._runs[run_id].add(tier, usd)
+        self._all.add(tier, usd)
+
+    def snapshot(self, run_id: str | None = None) -> dict[str, Any]:
+        """This run's spend, or the process lifetime total when run_id is None."""
+        if run_id is None:
+            return self._all.snapshot()
+        return self._runs[run_id].snapshot()
 
 
 class StatePlane:
@@ -53,10 +77,10 @@ class StatePlane:
         return self.events.append(event)
 
     def accrue_cost(self, run_id: str, tier: int, model: str, usd: float) -> None:
-        self.ledger.add(tier, usd)
+        self.ledger.add(run_id, tier, usd)
         self.emit(
             run_id,
             EventType.COST_ACCRUED,
             f"+${usd:.4f} on tier {tier} ({model})",
-            {"tier": tier, "model": model, "usd": round(usd, 6), **self.ledger.snapshot()},
+            {"tier": tier, "model": model, "usd": round(usd, 6), **self.ledger.snapshot(run_id)},
         )

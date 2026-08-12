@@ -129,7 +129,20 @@ export function useKarya() {
     setRunId(run_id);
   }, []);
 
+  /** Watch a run that was started elsewhere (e.g. by running a workspace).
+   *
+   * The stream replays a run's history before it goes live, so attaching works
+   * just as well mid-run or after a page reload as it does at the start.
+   */
+  const attach = useCallback((id: string) => {
+    setRunId((prev) => {
+      if (prev === id) return prev;
+      setEvents([]);
+      return id;
+    });
+  }, []);
+
   const approve = useCallback((approvalId: string, decision: boolean) => api.approve(approvalId, decision), []);
 
-  return { events, runId, derived: derive(events), startGoal, approve };
+  return { events, runId, derived: derive(events), startGoal, attach, approve };
 }

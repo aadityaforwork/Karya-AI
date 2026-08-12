@@ -167,6 +167,7 @@ class ApprovalStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     DENIED = "denied"
+    EXPIRED = "expired"
 
 
 class Approval(BaseModel):

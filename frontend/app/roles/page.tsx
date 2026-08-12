@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
-import type { Role } from "../../lib/types";
+import type { PoolFacets, Role } from "../../lib/types";
 import { statusBadge } from "../../lib/ui";
 import { SKILL_ACCENT, useSkills } from "../../lib/useSkills";
 
@@ -18,6 +18,7 @@ export default function WorkspacesPage() {
   const [skillId, setSkillId] = useState("hiring");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [facets, setFacets] = useState<PoolFacets | null>(null);
   const [form, setForm] = useState({ title: "", location: "", headcount: 2, must_have: "", nice_to_have: "", seniority: "" });
 
   const load = () => api.roles().then((r) => setRoles(r.roles)).catch(() => {});
@@ -43,6 +44,27 @@ export default function WorkspacesPage() {
 
   const cur = skills[skillId];
   const isSales = cur?.spec === "campaign";
+
+  // What the chosen skill's pool actually holds. Without this the form invites
+  // specs the pool can never match, and the workspace comes back empty.
+  useEffect(() => {
+    const pool = cur?.pool;
+    if (!open || !pool) return;
+    api.poolFacets(pool).then(setFacets).catch(() => setFacets(null));
+  }, [open, cur?.pool]);
+
+  const toggleSkill = (field: "must_have" | "nice_to_have", name: string) =>
+    setForm((f) => {
+      const cur = split(f[field]);
+      const next = cur.includes(name) ? cur.filter((s) => s !== name) : [...cur, name];
+      return { ...f, [field]: join(next) };
+    });
+
+  const unmatched = useMemo(() => {
+    if (!facets) return [];
+    const have = new Set(facets.skills.map((s) => s.name.toLowerCase()));
+    return split(form.must_have).filter((s) => !have.has(s.toLowerCase()));
+  }, [facets, form.must_have]);
   const create = async () => {
     setBusy(true);
     setErr("");
@@ -95,9 +117,52 @@ export default function WorkspacesPage() {
                 <div><label>{isSales ? "ICP / persona" : "Role title"}</label><input value={form.title} onChange={(e) => set("title", e.target.value)} /></div>
                 <div><label>{isSales ? "Prospects" : "Headcount"}</label><input type="number" min={1} value={form.headcount} onChange={(e) => set("headcount", e.target.value)} /></div>
               </div>
-              <div><label>{isSales ? "Region" : "Location"}</label><input value={form.location} onChange={(e) => set("location", e.target.value)} /></div>
-              <div><label>{isSales ? "Required signals" : "Must-have skills"} (comma-separated)</label><input value={form.must_have} onChange={(e) => set("must_have", e.target.value)} /></div>
+              <div>
+                <label>{isSales ? "Region" : "Location"}</label>
+                <input value={form.location} onChange={(e) => set("location", e.target.value)} />
+                {facets && facets.locations.length > 0 && (
+                  <div className="chips hintrow">
+                    {facets.locations.map((l) => (
+                      <span
+                        key={l.name}
+                        className={`chip${form.location.trim().toLowerCase() === l.name.toLowerCase() ? " on" : ""}`}
+                        onClick={() => set("location", l.name)}
+                      >
+                        {l.name} <span className="mono">{l.count}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label>{isSales ? "Required signals" : "Must-have skills"} (comma-separated)</label>
+                <input value={form.must_have} onChange={(e) => set("must_have", e.target.value)} />
+                {facets && (
+                  <div className="chips hintrow">
+                    {facets.skills.slice(0, 16).map((s) => (
+                      <span
+                        key={s.name}
+                        className={`chip${split(form.must_have).some((x) => x.toLowerCase() === s.name.toLowerCase()) ? " on" : ""}`}
+                        onClick={() => toggleSkill("must_have", s.name)}
+                      >
+                        {s.name} <span className="mono">{s.count}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div><label>{isSales ? "Nice-to-have signals" : "Nice-to-have skills"}</label><input value={form.nice_to_have} onChange={(e) => set("nice_to_have", e.target.value)} /></div>
+
+              {facets && unmatched.length > 0 && (
+                <div className="autherr">
+                  Nobody in the {facets.pool} pool ({facets.size} profiles) has{" "}
+                  <b>{unmatched.join(", ")}</b>. This workspace will source nobody — pick from the
+                  skills above, or <a href={`/talent?pool=${facets.pool}`} className="strong-ink">browse the pool →</a>
+                </div>
+              )}
+
               {err && <div className="autherr">{err} <a href="/billing" className="strong-ink">Upgrade →</a></div>}
               <div><button className="btn" disabled={busy || !form.title.trim()} onClick={create}>{busy ? "Creating…" : `Create ${cur?.spec || "workspace"}`}</button></div>
             </div>

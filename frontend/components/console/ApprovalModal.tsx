@@ -14,7 +14,13 @@ export default function ApprovalModal({
   const [busy, setBusy] = useState(false);
   const decide = async (d: boolean) => {
     setBusy(true);
-    await onDecide(approval.approval_id, d);
+    try {
+      await onDecide(approval.approval_id, d);
+    } finally {
+      // A rejected decision (a stale run, a dropped connection) used to leave
+      // both buttons disabled with no way back.
+      setBusy(false);
+    }
   };
 
   return (

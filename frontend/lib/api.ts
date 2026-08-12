@@ -7,6 +7,7 @@ import type {
   KaryaEvent,
   Message,
   PipelineCandidate,
+  PoolFacets,
   ReplySuggestion,
   Role,
   RunCandidate,
@@ -82,16 +83,17 @@ export const api = {
   // ---- data pools ----
   talent: (pool = "talent") => get<{ talent: TalentItem[] }>(`/api/talent?pool=${pool}`),
   candidate: (id: string) => get<CandidateDetail>(`/api/talent/${id}`),
+  poolFacets: (pool: string) => get<PoolFacets>(`/api/pools/${pool}/facets`),
 
   // ---- product ----
   dashboard: () => get<Dashboard>("/api/dashboard"),
   roles: () => get<{ roles: Role[] }>("/api/roles"),
-  role: (id: string) => get<{ role: Role; runs: any[] }>(`/api/roles/${id}`),
+  role: (id: string) => get<{ role: Role; runs: any[]; active_run: string | null }>(`/api/roles/${id}`),
   rolePipeline: (id: string) => get<{ pipeline: PipelineCandidate[] }>(`/api/roles/${id}/pipeline`),
   approvalsQueue: () => get<{ approvals: ApprovalQueueItem[] }>("/api/approvals"),
   candidateMessages: (pc: string) => get<{ messages: Message[] }>(`/api/candidates/${pc}/messages`),
   createRole: (body: Partial<Role>) => post<Role>("/api/roles", body),
-  runRole: (id: string) => post<{ run_id: string }>(`/api/roles/${id}/run`),
+  runRole: (id: string) => post<{ run_id: string; already_running: boolean }>(`/api/roles/${id}/run`),
   setStage: (pc: string, stage: Stage) => post(`/api/candidates/${pc}/stage`, { stage }),
   addNote: (pc: string, text: string) => post(`/api/candidates/${pc}/note`, { text }),
   reply: (pc: string) => post<{ messages: Message[] }>(`/api/candidates/${pc}/reply`),

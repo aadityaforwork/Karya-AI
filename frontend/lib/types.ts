@@ -69,6 +69,26 @@ export interface TalentItem {
   resume_lines: number;
 }
 
+export interface PoolFacet { name: string; count: number }
+
+/** What a data pool can actually be asked for. Drives the workspace form so a
+ *  spec cannot be written against skills nobody in the pool has. */
+export interface PoolFacets {
+  pool: string;
+  size: number;
+  skills: PoolFacet[];
+  locations: PoolFacet[];
+}
+
+/** Present on a run report when sourcing matched nobody. */
+export interface NoMatch {
+  pool: string;
+  pool_size: number;
+  requested: string[];
+  location: string;
+  available_skills: string[];
+}
+
 export interface ResumeLine { n: number; text: string }
 
 export interface CandidateDetail extends TalentItem {
